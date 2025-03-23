@@ -42,19 +42,14 @@ for file_path in glob.glob(DATA_DIR_PATH + "/*"):
 
 df = pl.concat(dfs)
 df = df.with_columns(pl.from_epoch("time"))
-
 start_datetime = df.select(pl.col("time")).min().row(0)[0]
 end_datetime = df.select(pl.col("time")).max().row(0)[0]
 if args.start_date is not None:
-    start_date, start_time = args.start_date.split(" ")
-    datetime_args = tuple(int(datetime_num) for datetime_num in start_date.split("-") + start_time.split(":"))
-    start_datetime = datetime(*datetime_args, tzinfo=None)
+    start_datetime = get_datetime(args.start_date)
 
 if args.end_date is not None:
-    end_date, end_time = args.end_date.split(" ")
-    datetime_args = tuple(int(datetime_num) for datetime_num in end_date.split("-") + end_time.split(":"))
-    end_datetime = datetime(*datetime_args, tzinfo=None)
+    end_datetime = get_datetime(args.end_date)
 
 df = df.filter(pl.col("time").is_between(start_datetime, end_datetime)).sort("time")
-print(df.select(pl.col("line", "prediction_line")))
+# print(df.select(pl.col("line", "prediction_line")))
 print(df)
