@@ -54,8 +54,7 @@ for file_path in glob.glob(DATA_DIR_PATH + "/*"):
             schema=EDIT_ENTRY_SCHEMA,
         )
     )
-df = pl.concat(dfs)
-df = df.with_columns(pl.from_epoch("time"))
+df = pl.concat(dfs).with_columns(pl.from_epoch("time"))
 
 # Extracting start/end datetimes if given
 start_datetime = df.select(pl.col("time")).min().row(0)[0]
@@ -66,10 +65,35 @@ if args.end_datetime is not None:
     end_datetime = get_datetime(args.end_datetime)
 
 # Calculating accuracy of predictions
-df = df.filter(pl.col("time").is_between(start_datetime, end_datetime)).sort("time")
-print(
-    df.select(pl.col("line", "prediction_line")).with_columns(
-        pl.col("prediction_line").shift(1)
+df = (
+    df.filter(pl.col("time").is_between(start_datetime, end_datetime))
+    .sort("time")
+    .with_columns(
+        [pl.col("prediction_line").shift(1), pl.col("prediction_file").shift(1)]
+    )
+    .slice(1)
+    .with_columns(
+        [
+            (pl.col("line") == pl.col("prediction_line")).alias(
+                "correct_line_prediction"
+            ),
+            (pl.col("file") == pl.col("prediction_file")).alias(
+                "correct_file_prediction"
+            ),
+        ]
     )
 )
-# print(df)
+print(
+    df.select(
+        [
+            (
+                pl.col("correct_line_prediction").cast(pl.Int8).sum()
+                / pl.col("correct_line_prediction").count() * 100
+            ).alias("line_prediction_accuracy (%)"),
+            (
+                pl.col("correct_file_prediction").cast(pl.Int8).sum()
+                / pl.col("correct_line_prediction").count() * 100
+            ).alias("file_prediction_accuracy"),
+        ]
+    )
+)
