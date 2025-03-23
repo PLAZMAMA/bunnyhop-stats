@@ -1,9 +1,15 @@
-from datetime import datetime, timezone
+from datetime import datetime
 import argparse
 import glob
 import os
 
 import polars as pl
+
+def get_datetime(datetime_str: str) -> datetime:
+    date, time = datetime_str.split(" ")
+    datetime_args = tuple(int(datetime_num) for datetime_num in date.split("-") + time.split(":"))
+    return datetime(*datetime_args, tzinfo=None)
+
 
 DATA_DIR_PATH = "/home/plazma/.config/local/share/nvim/bunnyhop/edit_predictions"
 EDIT_ENTRY_SCHEMA = {
@@ -35,11 +41,10 @@ for file_path in glob.glob(DATA_DIR_PATH + "/*"):
     )
 
 df = pl.concat(dfs)
-df = df.with_columns(pl.from_epoch(pl.col("time")))
-df = df.sort("time")
+df = df.with_columns(pl.from_epoch("time"))
 
-start_datetime = df.row(0)[1]
-end_datetime = df.row(-1)[1]
+start_datetime = df.select(pl.col("time")).min().row(0)[0]
+end_datetime = df.select(pl.col("time")).max().row(0)[0]
 if args.start_date is not None:
     start_date, start_time = args.start_date.split(" ")
     datetime_args = tuple(int(datetime_num) for datetime_num in start_date.split("-") + start_time.split(":"))
@@ -50,6 +55,6 @@ if args.end_date is not None:
     datetime_args = tuple(int(datetime_num) for datetime_num in end_date.split("-") + end_time.split(":"))
     end_datetime = datetime(*datetime_args, tzinfo=None)
 
-print(start_datetime, end_datetime)
-
-# print(df)
+df = df.filter(pl.col("time").is_between(start_datetime, end_datetime)).sort("time")
+print(df.select(pl.col("line", "prediction_line")))
+print(df)
