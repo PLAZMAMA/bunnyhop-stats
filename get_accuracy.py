@@ -1,13 +1,16 @@
-from datetime import datetime
 import argparse
 import glob
 import os
+from datetime import datetime
 
 import polars as pl
 
+
 def get_datetime(datetime_str: str) -> datetime:
     date, time = datetime_str.split(" ")
-    datetime_args = tuple(int(datetime_num) for datetime_num in date.split("-") + time.split(":"))
+    datetime_args = tuple(
+        int(datetime_num) for datetime_num in date.split("-") + time.split(":")
+    )
     return datetime(*datetime_args, tzinfo=None)
 
 
@@ -25,8 +28,18 @@ EDIT_ENTRY_SCHEMA = {
 
 # Reading CLI args
 parser = argparse.ArgumentParser(description="Get average accuracy of the predictions")
-parser.add_argument("-s", "--start-datetime", type=str, help="Start date in UTC. Format: year-month-day hour:minute:second. Exmaple: python3 get_accuracy.py -s '2023-03-16 00:00:00'")
-parser.add_argument("-e", "--end-datetime", type=str, help="End date in UTC. Format: year-month-day hour:minute:second. Exmaple: python3 get_accuracy.py -e '2023-03-16 00:00:00'")
+parser.add_argument(
+    "-s",
+    "--start-datetime",
+    type=str,
+    help="Start date in UTC. Format: year-month-day hour:minute:second. Exmaple: python3 get_accuracy.py -s '2023-03-16 00:00:00'",
+)
+parser.add_argument(
+    "-e",
+    "--end-datetime",
+    type=str,
+    help="End date in UTC. Format: year-month-day hour:minute:second. Exmaple: python3 get_accuracy.py -e '2023-03-16 00:00:00'",
+)
 args = parser.parse_args()
 
 # Getting all stored edit histories and combining into one df
@@ -52,7 +65,11 @@ if args.start_datetime is not None:
 if args.end_datetime is not None:
     end_datetime = get_datetime(args.end_datetime)
 
-# Calculating accuracy of predictions 
+# Calculating accuracy of predictions
 df = df.filter(pl.col("time").is_between(start_datetime, end_datetime)).sort("time")
-print(df.select(pl.col("line", "prediction_line")).with_columns(pl.col("prediction_line").shift(1)))
+print(
+    df.select(pl.col("line", "prediction_line")).with_columns(
+        pl.col("prediction_line").shift(1)
+    )
+)
 # print(df)
