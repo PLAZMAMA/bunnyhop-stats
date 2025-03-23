@@ -23,11 +23,13 @@ EDIT_ENTRY_SCHEMA = {
     "model": pl.String,
 }
 
+# Reading CLI args
 parser = argparse.ArgumentParser(description="Get average accuracy of the predictions")
 parser.add_argument("-s", "--start-date", type=str, help="Start date in UTC. Format: year-month-day hour:minute:second. Exmaple: python3 get_accuracy.py -s '2023-03-16 00:00:00'")
 parser.add_argument("-e", "--end-date", type=str, help="End date in UTC. Format: year-month-day hour:minute:second. Exmaple: python3 get_accuracy.py -e '2023-03-16 00:00:00'")
 args = parser.parse_args()
 
+# Getting all stored edit histories and combining into one df
 dfs: list[pl.DataFrame] = []
 for file_path in glob.glob(DATA_DIR_PATH + "/*"):
     if os.path.getsize(file_path) == 0:
@@ -39,17 +41,18 @@ for file_path in glob.glob(DATA_DIR_PATH + "/*"):
             schema=EDIT_ENTRY_SCHEMA,
         )
     )
-
 df = pl.concat(dfs)
 df = df.with_columns(pl.from_epoch("time"))
+
+# Extracting start/end datetimes if given
 start_datetime = df.select(pl.col("time")).min().row(0)[0]
 end_datetime = df.select(pl.col("time")).max().row(0)[0]
 if args.start_date is not None:
     start_datetime = get_datetime(args.start_date)
-
 if args.end_date is not None:
     end_datetime = get_datetime(args.end_date)
 
+# Calculating accuracy of predictions 
 df = df.filter(pl.col("time").is_between(start_datetime, end_datetime)).sort("time")
-# print(df.select(pl.col("line", "prediction_line")))
-print(df)
+print(df.select(pl.col("line", "prediction_line")).with_columns(pl.col("prediction_line").shift(1)))
+# print(df)
