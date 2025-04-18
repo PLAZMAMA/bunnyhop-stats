@@ -14,7 +14,7 @@ def get_datetime(datetime_str: str) -> datetime:
     return datetime(*datetime_args, tzinfo=None)
 
 
-DATA_DIR_PATH = "/home/plazma/.config/local/share/nvim/bunnyhop/edit_predictions"
+DATA_DIR_PATH = f"{os.path.expanduser("~")}/.config/local/share/nvim/bunnyhop/edit_predictions"
 EDIT_ENTRY_SCHEMA = {
     "seq": pl.Int32,
     "time": pl.Int32,
